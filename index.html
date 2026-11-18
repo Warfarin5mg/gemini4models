@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gemini 4 新モデル比較＆3Dパフォーマンスマップ（2026年11月時点）</title>
+  <style>
+    /* ==========================================================================
+       カラーテーマ定義（スタンドアロン動作のためライト／ダーク両対応を内蔵）
+       ========================================================================== */
+    :root {
+      --bg-page: #f8fafc;
+      --bg-card: #ffffff;
+      --bg-subtle: #f1f5f9;
+      --text-main: #0f172a;
+      --text-muted: #475569;
+      --text-faint: #64748b;
+      --border-color: #e2e8f0;
+      --accent: #2563eb;
+      --accent-fg: #ffffff;
+      --note-bg: #eff6ff;
+      --note-border: #3b82f6;
+      --grid-line: rgba(15, 23, 42, 0.08);
+      --canvas-bg: #ffffff;
+      --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.06);
+
+      /* モデル別カラー */
+      --c-carbon: #ef4444;
+      --c-argon: #a855f7;
+      --c-neon: #2563eb;
+      --c-hydrogen: #10b981;
+    }
+
+    html.dark {
+      --bg-page: #0b0f19;
+      --bg-card: #131a2a;
+      --bg-subtle: #1e293b;
+      --text-main: #f1f5f9;
+      --text-muted: #cbd5e1;
+      --text-faint: #94a3b8;
+      --border-color: #273449;
+      --accent: #3b82f6;
+      --accent-fg: #ffffff;
+      --note-bg: rgba(37, 99, 235, 0.14);
+      --note-border: #60a5fa;
+      --grid-line: rgba(241, 245, 249, 0.09);
+      --canvas-bg: #131a2a;
+      --shadow-sm: 0 2px 6px rgba(0, 0, 0, 0.35);
+
+      --c-carbon: #f87171;
+      --c-argon: #c084fc;
+      --c-neon: #60a5fa;
+      --c-hydrogen: #34d399;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+      background-color: var(--bg-page);
+      color: var(--text-main);
+      line-height: 1.65;
+      font-size: 14px;
+      transition: background-color 0.2s, color 0.2s;
+    }
+
+    .container {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 24px 20px 48px;
+    }
+
+    /* ヘッダー */
+    .page-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .page-title {
+      margin: 0 0 6px;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .meta-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 10px;
+      border-radius: 999px;
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--text-main);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ボタン共通 */
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      transition: all 0.15s ease;
+    }
+
+    button:hover {
+      color: var(--text-main);
+      background: var(--bg-subtle);
+    }
+
+    button.active {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+
+    button.secondary-active {
+      background: var(--bg-subtle);
+      color: var(--text-main);
+      border-color: var(--text-faint);
+      font-weight: 600;
+    }
+
+    /* カード */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      margin: 0 0 12px;
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 3Dプロット領域 */
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .plot-layout {
+      display: grid;
+      grid-template-columns: 1fr 270px;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    @media (max-width: 820px) {
+      .plot-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .canvas-wrap {
+      position: relative;
+      height: 440px;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      background: var(--canvas-bg);
+      overflow: hidden;
+    }
+
+    #plot3d {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: grab;
+    }
+
+    #plot3d:active {
+      cursor: grabbing;
+    }
+
+    .canvas-hint {
+      position: absolute;
+      left: 12px;
+      bottom: 10px;
+      font-size: 11px;
+      color: var(--text-faint);
+      pointer-events: none;
+    }
+
+    .canvas-zoom-controls {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      display: flex;
+      gap: 4px;
+    }
+
+    .canvas-zoom-controls button {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      background: var(--bg-card);
+    }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .sub-box {
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: var(--bg-subtle);
+    }
+
+    .sub-box h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .legend-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding: 3px 0;
+    }
+
+    .legend-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .detail-box {
+      flex: 1;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      background: var(--bg-card);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .detail-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .detail-title {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .detail-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 6px;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      padding: 3px 0;
+      border-bottom: 1px dashed var(--border-color);
+    }
+
+    /* 注釈・解説セクション */
+    .note-callout {
+      background: var(--note-bg);
+      border-left: 4px solid var(--note-border);
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 16px;
+      font-size: 13px;
+    }
+
+    .note-callout strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-main);
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    ul.clean-list {
+      margin: 6px 0 0;
+      padding-left: 20px;
+    }
+
+    ul.clean-list li {
+      margin-bottom: 6px;
+    }
+
+    /* 比較テーブル */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+    }
+
+    th {
+      background: var(--bg-subtle);
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    /* フッター・出典 */
+    .sources-footer {
+      font-size: 12px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      padding-top: 16px;
+      margin-top: 8px;
+    }
+
+    .sources-footer h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--text-main);
+    }
+
+    /* 印刷（PDF保存）時の最適化 */
+    @media print {
+      body {
+        background: #ffffff;
+        color: #000000;
+      }
+      .header-actions, .toolbar, .canvas-hint, .canvas-zoom-controls {
+        display: none !important;
+      }
+      .card {
+        box-shadow: none;
+        break-inside: avoid;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- ヘッダー -->
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Gemini 4 新モデル比較 &amp; 3Dパフォーマンスマップ</h1>
+        <div class="meta-badges">
+          <span class="badge">情報基準日：2026年11月時点</span>
+          <span>作成日：2026年11月19日（Gemini 4 Neon 発表反映）</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="export-png" title="現在のグラフをPNG画像として保存">📷 グラフをPNG保存</button>
+        <button id="print-pdf" title="印刷またはPDFとして保存">🖨️ PDF保存 / 印刷</button>
+        <button id="toggle-theme" title="ライト／ダーク表示を切り替え">🌓 テーマ切替</button>
+      </div>
+    </header>
+
+    <!-- インタラクティブ3Dプロットカード -->
+    <section class="card">
+      <div class="toolbar">
+        <div class="btn-group" id="model-filters">
+          <span style="font-size:12px; color:var(--text-faint); margin-right:4px;">モデル絞り込み:</span>
+          <button data-model="all" class="filter-btn active">すべて</button>
+          <button data-model="carbon" class="filter-btn">Carbon</button>
+          <button data-model="argon" class="filter-btn">Argon</button>
+          <button data-model="neon" class="filter-btn">Neon</button>
+          <button data-model="hydrogen" class="filter-btn">Hydrogen</button>
+        </div>
+
+        <div class="btn-group" id="view-presets">
+          <span style="font-size:12px; color:var(--text-faint); margin-right:4px;">視点:</span>
+          <button data-view="iso" class="view-btn secondary-active">3D俯瞰</button>
+          <button data-view="xz" class="view-btn">コスト×推論</button>
+          <button data-view="yz" class="view-btn">速度×推論</button>
+          <button data-view="xy" class="view-btn">コスト×速度</button>
+          <button id="reset-view" title="角度と倍率を初期位置へ戻す">リセット</button>
+        </div>
+      </div>
+
+      <div class="plot-layout">
+        <!-- 3Dキャンバス -->
+        <div class="canvas-wrap">
+          <canvas id="plot3d"></canvas>
+          <div class="canvas-hint">ドラッグで回転 / ホイールで拡大縮小 / 点をクリック・ホバーで詳細表示</div>
+          <div class="canvas-zoom-controls">
+            <button id="zoom-in" title="拡大">+</button>
+            <button id="zoom-out" title="縮小">−</button>
+          </div>
+        </div>
+
+        <!-- 右側パネル：凡例＋選択詳細 -->
+        <div class="side-panel">
+          <div class="sub-box">
+            <h3>モデル系列とAPI単価（1Mトークン）</h3>
+            <div id="legend-list"></div>
+            <div style="margin-top:8px; padding-top:8px; border-top:1px solid var(--border-color); font-size:11px; color:var(--text-faint);">
+              ※ 点のサイズ：Low → Medium → High → XHigh の順に拡大<br>
+              ※ 白枠で強調された点は実測アンカーあり
+            </div>
+          </div>
+
+          <div class="detail-box">
+            <div class="detail-header">
+              <span id="detail-title" class="detail-title">点を選択してください</span>
+              <span id="detail-badge" class="detail-badge" style="display:none;"></span>
+            </div>
+            <div id="detail-sub" style="font-size:12px; color:var(--text-muted);">
+              グラフ上のポイントにカーソルを合わせると、詳細が表示されます。
+            </div>
+            <div id="detail-metrics" style="display:none; margin-top:4px;">
+              <div class="metric-row"><span style="color:var(--text-faint)">X コスト指標</span><span id="m-cost" class="mono">-</span></div>
+              <div class="metric-row"><span style="color:var(--text-faint)">Y 完了速度</span><span id="m-speed" class="mono">-</span></div>
+              <div class="metric-row"><span style="color:var(--text-faint)">Z 推論能力</span><span id="m-intel" class="mono">-</span></div>
+            </div>
+            <div id="detail-note" style="font-size:12px; color:var(--text-muted); margin-top:4px;"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 解説1：読み方とデータ基準 -->
+    <section class="card">
+      <h2 class="section-title">読み方とデータ基準</h2>
+      <div class="note-callout">
+        <strong>NOTE（データの前提と実測アンカーについて）</strong>
+        第三者評価機関（Artificial Analysis）の公開ベンチマーク実測値および公式API単価が揃っているポイントを<strong>「実測アンカー（白枠で強調）」</strong>として配置し、全パラメータの組み合わせが未公開の <code>Low</code> / <code>Medium</code> 帯および速度指標については、思考トークン消費に伴う相対的な変化をモデル化した <strong>0〜100 の相対スコア</strong> でプロットしています。
+      </div>
+
+      <ul class="clean-list">
+        <li>
+          <strong>X軸（コスト高 →）</strong>：API基本単価（100万トークンあたり）＋ Thinking Level 上昇による思考トークン（出力課金）増加を加味した1タスクあたりの実効コスト感
+          <ul class="clean-list">
+            <li><strong>Hydrogen</strong>：入力 $1.50 / 出力 $7.50</li>
+            <li><strong>Neon</strong>：入力 $3.00 / 出力 $15.00（標準設定で Carbon よりタスク実効コスト約32%減）</li>
+            <li><strong>Carbon / Argon</strong>：入力 $4.00 / 出力 $20.00（2026年11月30日までの導入価格は $2.00 / $10.00）</li>
+          </ul>
+        </li>
+        <li>
+          <strong>Y軸（完了速度 速 →）</strong>：スループットと推論の待ち時間（レイテンシ）を合わせた体感の完了スピード（高いほど高速）
+        </li>
+        <li>
+          <strong>Z軸（推論能力 ↑）</strong>：Artificial Analysis Intelligence Index の実測値（<strong>Neon XHigh = 61</strong> / <strong>Carbon High = 60</strong> / <strong>Hydrogen XHigh = 54</strong> / <strong>Hydrogen High = 51</strong> / <strong>Argon High = 50</strong>）を基準にした推論性能
+        </li>
+      </ul>
+    </section>
+
+    <!-- 解説2：グラフから読み取れるポイント & 従来比較 -->
+    <div class="grid-2">
+      <section class="card" style="margin-bottom:0;">
+        <h2 class="section-title">グラフから読み取れるポイント</h2>
+        <ul class="clean-list">
+          <li>
+            <strong>Thinking Level のカーブ（軌跡）</strong><br />
+            どのモデルも <code>Low → Medium → High → XHigh</code> と上げるにつれて、<strong>推論能力（Z）が上がる代わりにコスト（X）が増え、完了速度（Y）が落ちる</strong>斜め方向の軌道を描きます。
+          </li>
+          <li>
+            <strong>「Neon」と「Hydrogen (XHigh)」のコストパフォーマンス</strong><br />
+            <strong>Neon</strong> は <code>High〜XHigh</code> 帯で <strong>Carbon に匹敵・あるいは一部上回る推論（AA Index 61）</strong> を出しつつ、X軸（コスト）・Y軸（速度）ともに手前側に位置しており、非常に効率の良いスイートスポットにいます。<br />
+            <strong>Hydrogen</strong> も <code>XHigh</code> に引き上げることで <strong>Argon (High) を上回る推論スコア（54）</strong> に到達するため、「時間はかかっても良いが単価を安く抑えて深く考えさせたい」場合に有効です。
+          </li>
+          <li>
+            <strong>2D正射影ビューの活用</strong><br />
+            グラフ上部のボタンで <strong>「コスト×推論」「速度×推論」「コスト×速度」</strong> の2D正射影ビューにも切り替えられますので、用途に合わせたモデル選びの参考にしてみてください。
+          </li>
+        </ul>
+      </section>
+
+      <section class="card" style="margin-bottom:0;">
+        <h2 class="section-title">従来モデル（Pro / Flash）との比較</h2>
+        <p style="margin-top:0; color:var(--text-muted); font-size:13px;">
+          Gemini 4 世代では従来の「Pro」「Flash」という命名が廃止され、用途と推論深度に応じた4つの元素名モデルに再編されています。
+        </p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>モデル</th>
+                <th>従来との対応</th>
+                <th>位置づけ・得意領域</th>
+                <th>Thinking Level</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Carbon</strong></td>
+                <td>Pro の上位拡張</td>
+                <td>最上位フラッグシップ。難解なバグ解析・設計・セキュリティ監査</td>
+                <td class="mono">Low / Med / High</td>
+              </tr>
+              <tr>
+                <td><strong>Argon</strong></td>
+                <td>Pro の主力後継</td>
+                <td>高効率フロンティア。大規模コード・長時間エージェント作業</td>
+                <td class="mono">Low / Med / High</td>
+              </tr>
+              <tr>
+                <td><strong>Neon</strong></td>
+                <td>Pro と Flash の中間</td>
+                <td>バランス型。複数ファイル改修・横断デバッグ・高効率分析</td>
+                <td class="mono">Low / Med / High / XHigh</td>
+              </tr>
+              <tr>
+                <td><strong>Hydrogen</strong></td>
+                <td>Flash の直接後継</td>
+                <td>高速・日常実行。日々のコーディング・テスト・Orchestrator実行役</td>
+                <td class="mono">Low / Med / High / XHigh</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- 出典・基準日フッター -->
+    <footer class="sources-footer">
+      <h3>情報の出所（出典）および時点について</h3>
+      <ul class="clean-list" style="margin-top:4px;">
+        <li><strong>基準時点</strong>：2026年11月時点（2026年11月19日作成／2026年11月18日発表の Gemini 4 Neon 情報を反映）</li>
+        <li><strong>モデル仕様・料金・役割定義</strong>：Google 公式ブログ（blog.google）、Google DeepMind / Google AI for Developers（ai.google.dev）、Google Antigravity ドキュメント公開情報（API基本単価、Thinking Level 仕様、Neon の Carbon 標準比コスト削減率、Orchestrator 構成など）</li>
+        <li><strong>第三者ベンチマーク実測値（Z軸アンカー）</strong>：Artificial Analysis（artificialanalysis.ai）公開の Artificial Analysis Intelligence Index（Neon XHigh=61, Carbon High=60, Hydrogen XHigh=54, Hydrogen High=51, Argon High=50）および Coding Agent Index 評価情報</li>
+        <li><strong>注意事項</strong>：API単価や評価指標は今後改定・更新される可能性があります。未公開の Thinking Level（Low / Medium 等）および体感速度（Y軸）の配置は、上記公開データをもとに相対的なトレードオフ傾向としてモデル化した参考値です。</li>
+      </ul>
+    </footer>
+  </div>
+
+  <script>
+    // =========================================================================
+    // テーマ自動判定（OS設定準拠）および切替ロジック
+    // =========================================================================
+    (function initTheme() {
+      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (prefersDark) document.documentElement.classList.add("dark");
+    })();
+
+    // =========================================================================
+    // モデルおよび Thinking Level 別プロットデータ
+    // =========================================================================
+    const MODELS = {
+      carbon: {
+        name: "Gemini 4 Carbon",
+        short: "Carbon",
+        cssVar: "--c-carbon",
+        priceShort: "$4/$20*",
+        priceNote: "入力$4 / 出力$20（11/30迄 $2/$10）"
+      },
+      argon: {
+        name: "Gemini 4 Argon",
+        short: "Argon",
+        cssVar: "--c-argon",
+        priceShort: "$4/$20*",
+        priceNote: "入力$4 / 出力$20（11/30迄 $2/$10）"
+      },
+      neon: {
+        name: "Gemini 4 Neon",
+        short: "Neon",
+        cssVar: "--c-neon",
+        priceShort: "$3/$15",
+        priceNote: "入力$3 / 出力$15"
+      },
+      hydrogen: {
+        name: "Gemini 4 Hydrogen",
+        short: "Hydrogen",
+        cssVar: "--c-hydrogen",
+        priceShort: "$1.5/$7.5",
+        priceNote: "入力$1.50 / 出力$7.50"
+      }
+    };
+
+    const POINTS = [
+      // Carbon
+      { model: "carbon", level: "Low",    cost: 42, speed: 62, intel: 62, anchored: false, note: "API単価は高めだが思考トークンを抑えて比較的迅速に応答（相対推定）" },
+      { model: "carbon", level: "Medium", cost: 64, speed: 40, intel: 78, anchored: false, note: "Carbonの標準設定。深い設計検討と実用速度の両立（相対推定）" },
+      { model: "carbon", level: "High",   cost: 95, speed: 16, intel: 93, anchored: true,  aaIndex: "AA Index: 60", note: "最上位フラッグシップ実測値。難解なバグ解析・設計に最高峰の粘り強さ" },
+
+      // Argon
+      { model: "argon",  level: "Low",    cost: 36, speed: 68, intel: 54, anchored: false, note: "思考を抑えた高速処理（相対推定）" },
+      { model: "argon",  level: "Medium", cost: 52, speed: 50, intel: 66, anchored: false, note: "Argonの標準設定。長時間セッションでも安定稼働（相対推定）" },
+      { model: "argon",  level: "High",   cost: 76, speed: 28, intel: 73, anchored: true,  aaIndex: "AA Index: 50", note: "大規模コード・長尺処理の主力（実測アンカーあり）" },
+
+      // Neon
+      { model: "neon",   level: "Low",    cost: 28, speed: 80, intel: 56, anchored: false, note: "バランス型をさらに高速化した設定（相対推定）" },
+      { model: "neon",   level: "Medium", cost: 42, speed: 68, intel: 70, anchored: false, note: "軽快な複数ファイル編集やリファクタリング向き（相対推定）" },
+      { model: "neon",   level: "High",   cost: 60, speed: 52, intel: 86, anchored: false, note: "Neonの標準設定。Carbon標準比で約32%低コスト（公式情報ベース）" },
+      { model: "neon",   level: "XHigh",  cost: 84, speed: 26, intel: 96, anchored: true,  aaIndex: "AA Index: 61", note: "実測値 AA Index 61（コーディングエージェント1位級）。高効率と最強推論を両立" },
+
+      // Hydrogen
+      { model: "hydrogen", level: "Low",    cost: 10, speed: 96, intel: 40, anchored: false, note: "旧Flash相当の最速・最安ライン（相対推定）" },
+      { model: "hydrogen", level: "Medium", cost: 18, speed: 86, intel: 58, anchored: false, note: "対話的コーディングやUI試作に最適な高速設定（相対推定）" },
+      { model: "hydrogen", level: "High",   cost: 30, speed: 74, intel: 75, anchored: true,  aaIndex: "AA Index: 51", note: "Hydrogenの標準設定。安価・高速ながら Argon High 相当の知能を発揮" },
+      { model: "hydrogen", level: "XHigh",  cost: 50, speed: 44, intel: 82, anchored: true,  aaIndex: "AA Index: 54", note: "実測値 AA Index 54。安価な単価のまま難問へ時間をかけて深く推論" }
+    ];
+
+    const LEVEL_RADIUS = { Low: 5, Medium: 6.5, High: 8.5, XHigh: 10.5 };
+
+    // カメラ状態
+    let yaw = -0.68;
+    let pitch = 0.42;
+    let targetYaw = yaw;
+    let targetPitch = pitch;
+    let zoom = 1.08;
+    let activeModel = "all";
+    let hoveredPoint = null;
+    let selectedPoint = POINTS.find(p => p.model === "neon" && p.level === "XHigh");
+    let isDragging = false;
+    let lastMouse = { x: 0, y: 0 };
+    let projectedCache = [];
+
+    const canvas = document.getElementById("plot3d");
+    const ctx = canvas.getContext("2d");
+
+    function getThemeColors() {
+      const style = getComputedStyle(document.documentElement);
+      const getVar = (name) => style.getPropertyValue(name).trim();
+      const colors = {
+        fg: getVar("--text-main"),
+        muted: getVar("--text-faint"),
+        border: getVar("--border-color"),
+        grid: getVar("--grid-line"),
+        canvasBg: getVar("--canvas-bg"),
+        models: {}
+      };
+      for (const [k, m] of Object.entries(MODELS)) {
+        colors.models[k] = getVar(m.cssVar);
+      }
+      return colors;
+    }
+
+    function renderLegend() {
+      const colors = getThemeColors();
+      const list = document.getElementById("legend-list");
+      list.innerHTML = "";
+      for (const [key, m] of Object.entries(MODELS)) {
+        const row = document.createElement("div");
+        row.className = "legend-row";
+        row.innerHTML = `
+          <span class="legend-left">
+            <span class="dot" style="background:${colors.models[key]}"></span>
+            <span>${m.short}</span>
+          </span>
+          <span class="mono" style="color:var(--text-faint)">${m.priceShort}</span>
+        `;
+        list.appendChild(row);
+      }
+    }
+
+    function updateDetailCard(pt) {
+      const target = pt || selectedPoint;
+      if (!target) return;
+
+      const m = MODELS[target.model];
+      const colors = getThemeColors();
+      const title = document.getElementById("detail-title");
+      const badge = document.getElementById("detail-badge");
+      const sub = document.getElementById("detail-sub");
+      const metrics = document.getElementById("detail-metrics");
+      const note = document.getElementById("detail-note");
+
+      title.textContent = `${m.short} (${target.level})`;
+      badge.style.display = "inline-block";
+      badge.textContent = target.anchored ? target.aaIndex : "相対推定";
+      badge.style.backgroundColor = target.anchored ? colors.models[target.model] : "transparent";
+      badge.style.color = target.anchored ? "#ffffff" : colors.muted;
+      badge.style.border = target.anchored ? "none" : `1px solid ${colors.border}`;
+
+      sub.textContent = `API単価: ${m.priceNote}`;
+      metrics.style.display = "block";
+      document.getElementById("m-cost").textContent = `${target.cost} / 100`;
+      document.getElementById("m-speed").textContent = `${target.speed} / 100`;
+      document.getElementById("m-intel").textContent = `${target.intel} / 100`;
+      note.textContent = target.note;
+    }
+
+    function project(x, y, z, width, height) {
+      const cx = width / 2;
+      const cy = height / 2 + 16;
+      const nx = x - 50;
+      const ny = y - 50;
+      const nz = z - 50;
+
+      const cyaw = Math.cos(yaw), syaw = Math.sin(yaw);
+      const cpitch = Math.cos(pitch), spitch = Math.sin(pitch);
+
+      const rx = nx * cyaw - ny * syaw;
+      const ry = nx * syaw + ny * cyaw;
+
+      const camZ = nz * cpitch + ry * spitch;
+      const depth = ry * cpitch - nz * spitch;
+
+      const baseScale = Math.min(width, height) * 1.15;
+      const dist = 240;
+      const scale = (baseScale * zoom) / (dist + depth);
+
+      return {
+        sx: cx + rx * scale,
+        sy: cy - camZ * scale,
+        depth,
+        scale
+      };
+    }
+
+    function draw(fillBgForExport = false) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width === 0 || rect.height === 0) return;
+
+      if (canvas.width !== Math.round(rect.width * dpr) || canvas.height !== Math.round(rect.height * dpr)) {
+        canvas.width = Math.round(rect.width * dpr);
+        canvas.height = Math.round(rect.height * dpr);
+      }
+
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const colors = getThemeColors();
+      const w = rect.width;
+      const h = rect.height;
+
+      if (fillBgForExport) {
+        ctx.fillStyle = colors.canvasBg;
+        ctx.fillRect(0, 0, w, h);
+      } else {
+        ctx.clearRect(0, 0, w, h);
+      }
+
+      // 1. 床面グリッド (Z = 0)
+      ctx.strokeStyle = colors.grid;
+      ctx.lineWidth = 1;
+      for (let i = 0; i <= 100; i += 25) {
+        const a1 = project(i, 0, 0, w, h);
+        const a2 = project(i, 100, 0, w, h);
+        ctx.beginPath(); ctx.moveTo(a1.sx, a1.sy); ctx.lineTo(a2.sx, a2.sy); ctx.stroke();
+
+        const b1 = project(0, i, 0, w, h);
+        const b2 = project(100, i, 0, w, h);
+        ctx.beginPath(); ctx.moveTo(b1.sx, b1.sy); ctx.lineTo(b2.sx, b2.sy); ctx.stroke();
+      }
+
+      // 2. 座標軸とラベル
+      const origin = project(0, 0, 0, w, h);
+      const xEnd = project(108, 0, 0, w, h);
+      const yEnd = project(0, 108, 0, w, h);
+      const zEnd = project(0, 0, 108, w, h);
+
+      const drawAxis = (p0, p1, label, align) => {
+        ctx.strokeStyle = colors.muted;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(p0.sx, p0.sy);
+        ctx.lineTo(p1.sx, p1.sy);
+        ctx.stroke();
+
+        ctx.fillStyle = colors.fg;
+        ctx.font = "600 12px sans-serif";
+        ctx.textAlign = align || "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(label, p1.sx, p1.sy - (label.startsWith("Z") ? 12 : 0));
+      };
+
+      drawAxis(origin, xEnd, "X: コスト高 →", "left");
+      drawAxis(origin, yEnd, "Y: 完了速度 速 →", "center");
+      drawAxis(origin, zEnd, "Z: 推論能力 ↑", "center");
+
+      // 3. フィルタ済みデータと軌跡ライン
+      const visiblePoints = POINTS.filter(p => activeModel === "all" || p.model === activeModel);
+      const modelKeys = activeModel === "all" ? Object.keys(MODELS) : [activeModel];
+
+      for (const mk of modelKeys) {
+        const series = visiblePoints.filter(p => p.model === mk);
+        if (series.length < 2) continue;
+        ctx.strokeStyle = colors.models[mk];
+        ctx.lineWidth = 2.2;
+        ctx.globalAlpha = 0.72;
+        ctx.beginPath();
+        series.forEach((pt, idx) => {
+          const p = project(pt.cost, pt.speed, pt.intel, w, h);
+          if (idx === 0) ctx.moveTo(p.sx, p.sy);
+          else ctx.lineTo(p.sx, p.sy);
+        });
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+
+      // 4. 深度ソートして描画
+      const renderItems = visiblePoints.map(pt => ({
+        pt,
+        proj: project(pt.cost, pt.speed, pt.intel, w, h),
+        floor: project(pt.cost, pt.speed, 0, w, h)
+      }));
+      renderItems.sort((a, b) => b.proj.depth - a.proj.depth);
+      projectedCache = renderItems;
+
+      for (const item of renderItems) {
+        const { pt, proj, floor } = item;
+        const mColor = colors.models[pt.model];
+        const isFocus = (hoveredPoint === pt) || (selectedPoint === pt && !hoveredPoint);
+        const r = LEVEL_RADIUS[pt.level] * (0.85 + proj.scale * 0.14) + (isFocus ? 2.4 : 0);
+
+        // 床面への垂線
+        ctx.save();
+        ctx.setLineDash([2, 3]);
+        ctx.strokeStyle = isFocus ? mColor : colors.grid;
+        ctx.lineWidth = isFocus ? 1.6 : 1;
+        ctx.beginPath();
+        ctx.moveTo(proj.sx, proj.sy);
+        ctx.lineTo(floor.sx, floor.sy);
+        ctx.stroke();
+        ctx.restore();
+
+        // 床面影ドット
+        ctx.fillStyle = colors.muted;
+        ctx.globalAlpha = 0.35;
+        ctx.beginPath();
+        ctx.arc(floor.sx, floor.sy, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+
+        // 本体ドット
+        ctx.beginPath();
+        ctx.arc(proj.sx, proj.sy, r, 0, Math.PI * 2);
+        ctx.fillStyle = mColor;
+        ctx.fill();
+
+        ctx.lineWidth = isFocus ? 2.6 : (pt.anchored ? 2 : 1);
+        ctx.strokeStyle = isFocus ? colors.fg : (pt.anchored ? "#ffffff" : colors.canvasBg);
+        ctx.stroke();
+
+        // ラベル
+        if (isFocus || pt.anchored || activeModel !== "all") {
+          ctx.fillStyle = colors.fg;
+          ctx.font = isFocus ? "700 12px sans-serif" : "500 11px sans-serif";
+          ctx.textAlign = "left";
+          ctx.textBaseline = "middle";
+          ctx.fillText(`${MODELS[pt.model].short} ${pt.level}`, proj.sx + r + 5, proj.sy);
+        }
+      }
+    }
+
+    function animate() {
+      const dy = targetYaw - yaw;
+      const dp = targetPitch - pitch;
+      if (Math.abs(dy) > 0.001 || Math.abs(dp) > 0.001) {
+        yaw += dy * 0.18;
+        pitch += dp * 0.18;
+        draw();
+      }
+      requestAnimationFrame(animate);
+    }
+
+    // マウス・タッチ操作
+    canvas.addEventListener("pointerdown", (e) => {
+      isDragging = true;
+      lastMouse = { x: e.clientX, y: e.clientY };
+      canvas.setPointerCapture(e.pointerId);
+    });
+
+    canvas.addEventListener("pointermove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+
+      if (isDragging) {
+        const dx = e.clientX - lastMouse.x;
+        const dy = e.clientY - lastMouse.y;
+        lastMouse = { x: e.clientX, y: e.clientY };
+        yaw += dx * 0.008;
+        pitch = Math.max(-1.45, Math.min(1.57, pitch + dy * 0.008));
+        targetYaw = yaw;
+        targetPitch = pitch;
+        draw();
+        return;
+      }
+
+      let found = null;
+      for (let i = projectedCache.length - 1; i >= 0; i--) {
+        const item = projectedCache[i];
+        if (Math.hypot(mx - item.proj.sx, my - item.proj.sy) <= 14) {
+          found = item.pt;
+          break;
+        }
+      }
+      if (hoveredPoint !== found) {
+        hoveredPoint = found;
+        canvas.style.cursor = found ? "pointer" : "grab";
+        updateDetailCard(found);
+        draw();
+      }
+    });
+
+    canvas.addEventListener("pointerup", () => {
+      if (isDragging && hoveredPoint) {
+        selectedPoint = hoveredPoint;
+        updateDetailCard(selectedPoint);
+      }
+      isDragging = false;
+    });
+
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      zoom = Math.max(0.65, Math.min(1.85, zoom - e.deltaY * 0.0008));
+      draw();
+    }, { passive: false });
+
+    document.getElementById("zoom-in").addEventListener("click", () => {
+      zoom = Math.min(1.85, zoom + 0.15);
+      draw();
+    });
+    document.getElementById("zoom-out").addEventListener("click", () => {
+      zoom = Math.max(0.65, zoom - 0.15);
+      draw();
+    });
+
+    // 絞り込みボタン
+    document.querySelectorAll(".filter-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        activeModel = btn.dataset.model;
+        document.querySelectorAll(".filter-btn").forEach(b => b.classList.toggle("active", b === btn));
+        const first = POINTS.find(p => activeModel === "all" ? (p.model === "neon" && p.level === "XHigh") : (p.model === activeModel && p.anchored)) || POINTS.find(p => p.model === activeModel);
+        if (first) {
+          selectedPoint = first;
+          updateDetailCard(first);
+        }
+        draw();
+      });
+    });
+
+    // 視点プリセット
+    const PRESETS = {
+      iso: { yaw: -0.68, pitch: 0.42 },
+      xz:  { yaw: 0, pitch: 0 },
+      yz:  { yaw: -Math.PI / 2, pitch: 0 },
+      xy:  { yaw: 0, pitch: Math.PI / 2 }
+    };
+    document.querySelectorAll(".view-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const p = PRESETS[btn.dataset.view];
+        targetYaw = p.yaw;
+        targetPitch = p.pitch;
+        document.querySelectorAll(".view-btn").forEach(b => b.classList.toggle("secondary-active", b === btn));
+      });
+    });
+
+    document.getElementById("reset-view").addEventListener("click", () => {
+      targetYaw = PRESETS.iso.yaw;
+      targetPitch = PRESETS.iso.pitch;
+      zoom = 1.08;
+      document.querySelectorAll(".view-btn").forEach(b => b.classList.toggle("secondary-active", b.dataset.view === "iso"));
+      draw();
+    });
+
+    // テーマ切替
+    document.getElementById("toggle-theme").addEventListener("click", () => {
+      document.documentElement.classList.toggle("dark");
+      renderLegend();
+      updateDetailCard(hoveredPoint || selectedPoint);
+      draw();
+    });
+
+    // PNG保存（背景塗りつぶし描画後にダウンロード）
+    document.getElementById("export-png").addEventListener("click", () => {
+      draw(true);
+      const link = document.createElement("a");
+      link.download = "gemini4-3d-plot-202611.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      draw(false);
+    });
+
+    // 印刷 / PDF保存
+    document.getElementById("print-pdf").addEventListener("click", () => {
+      window.print();
+    });
+
+    window.addEventListener("resize", () => draw());
+
+    // 初期化
+    renderLegend();
+    updateDetailCard(selectedPoint);
+    draw();
+    animate();
+  </script>
+</body>
+</html>
